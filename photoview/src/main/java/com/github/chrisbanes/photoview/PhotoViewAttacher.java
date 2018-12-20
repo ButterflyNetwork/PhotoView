@@ -20,6 +20,7 @@ import android.graphics.Matrix;
 import android.graphics.Matrix.ScaleToFit;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -620,6 +621,10 @@ public class PhotoViewAttacher implements View.OnTouchListener,
             mBaseMatrix.postTranslate((viewWidth - drawableWidth * scale) / 2F,
                 (viewHeight - drawableHeight * scale) / 2F);
 
+        } else if (mScaleType == ScaleType.FIT_START) {
+            mBaseMatrix.postScale(widthScale, widthScale); // scale to fix view width
+            mBaseMatrix.postTranslate(0, 0);      // keep the image top aligned
+
         } else {
             RectF mTempSrc = new RectF(0, 0, drawableWidth, drawableHeight);
             RectF mTempDst = new RectF(0, 0, viewWidth, viewHeight);
@@ -679,9 +684,6 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         final int viewWidth = getImageViewWidth(mImageView);
         if (width <= viewWidth) {
             switch (mScaleType) {
-                case FIT_START:
-                    deltaX = -rect.left;
-                    break;
                 case FIT_END:
                     deltaX = viewWidth - width - rect.left;
                     break;
@@ -743,6 +745,13 @@ public class PhotoViewAttacher implements View.OnTouchListener,
             // We haven't hit our target scale yet, so post ourselves again
             if (t < 1f) {
                 Compat.postOnAnimation(mImageView, this);
+            }
+
+            // a hack here - reset matrix at the end of animation when the target scale value is
+            // 1 but the actual value is 0.9999999..
+            if (t == 1f && mZoomEnd == 1f && getScale() != 1f) {
+                mSuppMatrix.reset();
+                checkAndDisplayMatrix();
             }
         }
 
