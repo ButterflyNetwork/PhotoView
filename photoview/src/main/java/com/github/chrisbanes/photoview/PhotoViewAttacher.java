@@ -20,7 +20,6 @@ import android.graphics.Matrix;
 import android.graphics.Matrix.ScaleToFit;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -45,14 +44,14 @@ public class PhotoViewAttacher implements View.OnTouchListener,
     private static float DEFAULT_MIN_SCALE = 1.0f;
     private static int DEFAULT_ZOOM_DURATION = 200;
 
-    private static final int HORIZONTAL_EDGE_NONE = -1;
-    private static final int HORIZONTAL_EDGE_LEFT = 0;
-    private static final int HORIZONTAL_EDGE_RIGHT = 1;
-    private static final int HORIZONTAL_EDGE_BOTH = 2;
-    private static final int VERTICAL_EDGE_NONE = -1;
-    private static final int VERTICAL_EDGE_TOP = 0;
-    private static final int VERTICAL_EDGE_BOTTOM = 1;
-    private static final int VERTICAL_EDGE_BOTH = 2;
+    protected static final int HORIZONTAL_EDGE_NONE = -1;
+    protected static final int HORIZONTAL_EDGE_LEFT = 0;
+    protected static final int HORIZONTAL_EDGE_RIGHT = 1;
+    protected static final int HORIZONTAL_EDGE_BOTH = 2;
+    protected static final int VERTICAL_EDGE_NONE = -1;
+    protected static final int VERTICAL_EDGE_TOP = 0;
+    protected static final int VERTICAL_EDGE_BOTTOM = 1;
+    protected static final int VERTICAL_EDGE_BOTH = 2;
     private static int SINGLE_TOUCH = 1;
 
     private Interpolator mInterpolator = new AccelerateDecelerateInterpolator();
@@ -64,16 +63,16 @@ public class PhotoViewAttacher implements View.OnTouchListener,
     private boolean mAllowParentInterceptOnEdge = true;
     private boolean mBlockParentIntercept = false;
 
-    private ImageView mImageView;
+    protected ImageView mImageView;
 
     // Gesture Detectors
     private GestureDetector mGestureDetector;
     private CustomGestureDetector mScaleDragDetector;
 
     // These are set so we don't keep allocating them on the heap
-    private final Matrix mBaseMatrix = new Matrix();
+    protected final Matrix mBaseMatrix = new Matrix();
     private final Matrix mDrawMatrix = new Matrix();
-    private final Matrix mSuppMatrix = new Matrix();
+    protected final Matrix mSuppMatrix = new Matrix();
     private final RectF mDisplayRect = new RectF();
     private final float[] mMatrixValues = new float[9];
 
@@ -89,12 +88,12 @@ public class PhotoViewAttacher implements View.OnTouchListener,
     private OnViewDragListener mOnViewDragListener;
 
     private FlingRunnable mCurrentFlingRunnable;
-    private int mHorizontalScrollEdge = HORIZONTAL_EDGE_BOTH;
-    private int mVerticalScrollEdge = VERTICAL_EDGE_BOTH;
+    protected int mHorizontalScrollEdge = HORIZONTAL_EDGE_BOTH;
+    protected int mVerticalScrollEdge = VERTICAL_EDGE_BOTH;
     private float mBaseRotation;
 
     private boolean mZoomEnabled = true;
-    private ScaleType mScaleType = ScaleType.FIT_CENTER;
+    protected ScaleType mScaleType = ScaleType.FIT_CENTER;
 
     private OnGestureListener onGestureListener = new OnGestureListener() {
         @Override
@@ -228,12 +227,10 @@ public class PhotoViewAttacher implements View.OnTouchListener,
                     float scale = getScale();
                     float x = ev.getX();
                     float y = ev.getY();
-                    if (scale < getMediumScale()) {
-                        setScale(getMediumScale(), x, y, true);
-                    } else if (scale >= getMediumScale() && scale < getMaximumScale()) {
-                        setScale(getMaximumScale(), x, y, true);
-                    } else {
+                    if (scale > getMinimumScale()) {
                         setScale(getMinimumScale(), x, y, true);
+                    } else {
+                        setScale(getMaximumScale(), x, y, true);
                     }
                 } catch (ArrayIndexOutOfBoundsException e) {
                     // Can sometimes happen when getX() and getY() is called
@@ -516,7 +513,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         matrix.set(mSuppMatrix);
     }
 
-    private Matrix getDrawMatrix() {
+    protected Matrix getDrawMatrix() {
         mDrawMatrix.set(mBaseMatrix);
         mDrawMatrix.postConcat(mSuppMatrix);
         return mDrawMatrix;
@@ -552,7 +549,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         checkMatrixBounds();
     }
 
-    private void setImageViewMatrix(Matrix matrix) {
+    protected void setImageViewMatrix(Matrix matrix) {
         mImageView.setImageMatrix(matrix);
         // Call MatrixChangedListener if needed
         if (mMatrixChangeListener != null) {
@@ -578,7 +575,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
      * @param matrix - Matrix to map Drawable against
      * @return RectF - Displayed Rectangle
      */
-    private RectF getDisplayRect(Matrix matrix) {
+    protected RectF getDisplayRect(Matrix matrix) {
         Drawable d = mImageView.getDrawable();
         if (d != null) {
             mDisplayRect.set(0, 0, d.getIntrinsicWidth(),
@@ -594,7 +591,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
      *
      * @param drawable - Drawable being displayed
      */
-    private void updateBaseMatrix(Drawable drawable) {
+    protected void updateBaseMatrix(Drawable drawable) {
         if (drawable == null) {
             return;
         }
@@ -621,10 +618,6 @@ public class PhotoViewAttacher implements View.OnTouchListener,
             mBaseMatrix.postTranslate((viewWidth - drawableWidth * scale) / 2F,
                 (viewHeight - drawableHeight * scale) / 2F);
 
-        } else if (mScaleType == ScaleType.FIT_START) {
-            mBaseMatrix.postScale(widthScale, widthScale); // scale to fix view width
-            mBaseMatrix.postTranslate(0, 0);      // keep the image top aligned
-
         } else {
             RectF mTempSrc = new RectF(0, 0, drawableWidth, drawableHeight);
             RectF mTempDst = new RectF(0, 0, viewWidth, viewHeight);
@@ -648,10 +641,10 @@ public class PhotoViewAttacher implements View.OnTouchListener,
                     break;
             }
         }
-        setImageViewMatrix(getDrawMatrix());
+        resetMatrix();
     }
 
-    private boolean checkMatrixBounds() {
+    protected boolean checkMatrixBounds() {
         final RectF rect = getDisplayRect(getDrawMatrix());
         if (rect == null) {
             return false;
@@ -684,6 +677,9 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         final int viewWidth = getImageViewWidth(mImageView);
         if (width <= viewWidth) {
             switch (mScaleType) {
+                case FIT_START:
+                    deltaX = -rect.left;
+                    break;
                 case FIT_END:
                     deltaX = viewWidth - width - rect.left;
                     break;
@@ -706,11 +702,11 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         return true;
     }
 
-    private int getImageViewWidth(ImageView imageView) {
+    protected int getImageViewWidth(ImageView imageView) {
         return imageView.getWidth() - imageView.getPaddingLeft() - imageView.getPaddingRight();
     }
 
-    private int getImageViewHeight(ImageView imageView) {
+    protected int getImageViewHeight(ImageView imageView) {
         return imageView.getHeight() - imageView.getPaddingTop() - imageView.getPaddingBottom();
     }
 
@@ -745,11 +741,10 @@ public class PhotoViewAttacher implements View.OnTouchListener,
             // We haven't hit our target scale yet, so post ourselves again
             if (t < 1f) {
                 Compat.postOnAnimation(mImageView, this);
-            }
 
-            // a hack here - reset matrix at the end of animation when the target scale value is
-            // 1 but the actual value is 0.9999999..
-            if (t == 1f && mZoomEnd == 1f && getScale() != 1f) {
+            } else if (mZoomEnd == 1f && getScale() != 1f) {
+                // a hack here - reset matrix at the end of animation when the target scale value is
+                // 1 but the actual value is 0.9999999..
                 mSuppMatrix.reset();
                 checkAndDisplayMatrix();
             }
