@@ -314,6 +314,14 @@ public class PhotoViewAttacher implements View.OnTouchListener,
             (getValue(mSuppMatrix, Matrix.MSKEW_Y), 2));
     }
 
+    /**
+     * Amount original image is scaled, where 1 is no scaling.
+     */
+    public float getImageScale() {
+        return (float) Math.sqrt((float) Math.pow(getValue(mDrawMatrix, Matrix.MSCALE_X), 2) + (float) Math.pow
+                (getValue(mDrawMatrix, Matrix.MSKEW_Y), 2));
+    }
+
     public ScaleType getScaleType() {
         return mScaleType;
     }
