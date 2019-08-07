@@ -95,6 +95,12 @@ public class PhotoViewAttacher implements View.OnTouchListener,
     private boolean mZoomEnabled = true;
     protected ScaleType mScaleType = ScaleType.FIT_CENTER;
 
+    // Indicates if the zooming is still going on after motion event up.
+    private boolean mIsInAnimatedZooming = false;
+
+    // Indicates if the fling is still going on after motion event up.
+    private boolean mIsInFling = false;
+
     private OnGestureListener onGestureListener = new OnGestureListener() {
         @Override
         public void onDrag(float dx, float dy) {
@@ -136,6 +142,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
 
         @Override
         public void onFling(float startX, float startY, float velocityX, float velocityY) {
+            setIsInFling(true);
             mCurrentFlingRunnable = new FlingRunnable(mImageView.getContext());
             mCurrentFlingRunnable.fling(getImageViewWidth(mImageView),
                 getImageViewHeight(mImageView), (int) velocityX, (int) velocityY);
@@ -360,6 +367,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
                         if (rect != null) {
                             v.post(new AnimatedZoomRunnable(getScale(), mMinScale,
                                 rect.centerX(), rect.centerY()));
+                            setIsInAnimatedZooming(true);
                             handled = true;
                         }
                     } else if (getScale() > mMaxScale) {
@@ -367,6 +375,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
                         if (rect != null) {
                             v.post(new AnimatedZoomRunnable(getScale(), mMaxScale,
                                 rect.centerX(), rect.centerY()));
+                            setIsInAnimatedZooming(true);
                             handled = true;
                         }
                     }
@@ -725,6 +734,14 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         }
     }
 
+    protected void setIsInAnimatedZooming(boolean isInAnimatedZooming) {
+        this.mIsInAnimatedZooming = isInAnimatedZooming;
+    }
+
+    protected void setIsInFling(boolean isInFling) {
+        this.mIsInFling = isInFling;
+    }
+
     private class AnimatedZoomRunnable implements Runnable {
 
         private final float mFocalX, mFocalY;
@@ -756,6 +773,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
                 mSuppMatrix.reset();
                 checkAndDisplayMatrix();
             }
+            setIsInAnimatedZooming(t < 1f);
         }
 
         private float interpolate() {
@@ -811,6 +829,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
 
         @Override
         public void run() {
+            setIsInFling(!mScroller.isFinished());
             if (mScroller.isFinished()) {
                 return; // remaining post that should not be handled
             }
